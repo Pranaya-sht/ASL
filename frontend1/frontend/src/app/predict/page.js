@@ -118,30 +118,32 @@ export default function Page() {
       <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" strategy="beforeInteractive" />
+      <div className="bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-300 via-purple-500 to-pink-400 dark:from-gray-900 dark:via-gray-800 dark:to-black ">
 
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-600 via-blue-400 to-red-500 p-6">
-        <motion.h1
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          className="text-4xl font-bold text-white mb-6"
-        >
-          🖐️ ASL Live Tracker
-        </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+            className="text-4xl font-bold text-white mb-6"
+          >
+            🖐️ ASL Live Tracker
+          </motion.h1>
 
-        <div className="relative">
-          <video ref={videoRef} className="hidden" />
-          <canvas ref={canvasRef} className="rounded-lg border-4 border-white" />
+          <div className="relative">
+            <video ref={videoRef} className="hidden" />
+            <canvas ref={canvasRef} className="rounded-lg border-4 border-white" />
+          </div>
+
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1 }}
+            className="mt-6 text-2xl font-semibold text-white bg-gray-900 px-6 py-3 rounded-full"
+          >
+            Predicted Sign: <span className="text-blue-300">{prediction}</span>
+          </motion.div>
         </div>
-
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 1 }}
-          className="mt-6 text-2xl font-semibold text-white bg-gray-900 px-6 py-3 rounded-full"
-        >
-          Predicted Sign: <span className="text-blue-300">{prediction}</span>
-        </motion.div>
       </div>
     </>
   );

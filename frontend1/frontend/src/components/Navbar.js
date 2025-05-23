@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
+import ThemeToggle from './ui/ThemeToggle';
 export default function Navbar() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const router = useRouter();
@@ -33,6 +33,10 @@ export default function Navbar() {
                         >
                             Logout
                         </button>
+                        <Link href="/profile" className="hover:text-blue-300">
+                            Profile
+                        </Link>
+
                     </>
                 ) : (
                     <>
@@ -44,6 +48,7 @@ export default function Navbar() {
                         </Link>
                     </>
                 )}
+                <ThemeToggle />
             </div>
         </nav>
     );

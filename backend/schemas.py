@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
+
 class UserBase(BaseModel):
     email: EmailStr
     username: str
@@ -38,3 +39,25 @@ class TokenData(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+# schemas.py
+
+class Analytics(BaseModel):
+    lessons_completed: int
+    words_learned: int
+    total_learning_minutes: int
+    total_predictions: int
+    total_translations: int
+
+class UserProfileResponse(BaseModel):
+    user: UserOut
+    analytics: Analytics
+
+class UserUpdate(BaseModel):
+    profile_image_url: Optional[str] = None
+    bio: Optional[str] = None
+
+
+
+class PredictionCreate(BaseModel):
+    prediction: str

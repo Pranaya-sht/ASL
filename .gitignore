@@ -112,3 +112,10 @@ ipynb_checkpoints/
 
 # VSCode
 .vscode/
+
+#folders
+__pycache__/
+dataset/
+flashcards/
+raw_videos/
+video_frames/
