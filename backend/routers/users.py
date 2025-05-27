@@ -21,6 +21,7 @@ from models import User
 
 import os
 from uuid import uuid4
+from datetime import datetime
 
 router = APIRouter(
     prefix="/users",
@@ -130,14 +131,28 @@ def upload_profile_image(
         "profile_image_url": current_user.profile_image_url
     })
     
+    
 @router.post("/api/flashcards/predict")
-def save_prediction(prediction: PredictionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def save_prediction(prediction: schemas.PredictionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_entry = models.FlashcardPrediction(
         user_id=current_user.id,
-        prediction=prediction.prediction
+        prediction=prediction.prediction,
+        timestamp=datetime.utcnow()
     )
     db.add(new_entry)
-    current_user.total_predictions += 1  # Optional: if you're tracking
+    current_user.total_predictions += 1
     db.commit()
     db.refresh(new_entry)
     return {"status": "success", "prediction_id": new_entry.id}
+
+@router.get("/api/flashcards/predict")
+def get_latest_prediction(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    latest = db.query(models.FlashcardPrediction)\
+               .filter(models.FlashcardPrediction.user_id == current_user.id)\
+               .order_by(models.FlashcardPrediction.timestamp.desc())\
+               .first()
+    print("Latest prediction:", latest)
+    if not latest:
+        return {"prediction": None}
+    return {"prediction": latest}
+    

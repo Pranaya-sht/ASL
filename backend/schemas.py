@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -61,3 +61,7 @@ class UserUpdate(BaseModel):
 
 class PredictionCreate(BaseModel):
     prediction: str
+
+class QuizSubmission(BaseModel):
+    level: int
+    answers: List[dict] 
