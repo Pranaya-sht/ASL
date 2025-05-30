@@ -5,7 +5,7 @@ import numpy as np
 import csv
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1)
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2)
 mp_drawing = mp.solutions.drawing_utils
 
 data_dir = "dataset"
