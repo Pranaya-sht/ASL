@@ -31,7 +31,7 @@ router = APIRouter(
 UPLOAD_DIR = "static/uploads"
 
 
-# ✅ Register new user
+# Register new user
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = get_user_by_email(db, user.email)
@@ -44,7 +44,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-# ✅ Login existing user
+# Login existing user
 @router.post("/login", response_model=Token)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = get_user_by_email(db, form_data.username)
