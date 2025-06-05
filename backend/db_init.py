@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 from models import Base
 
-DATABASE_URL = "postgresql://postgres:##8888@localhost/asl_app"
+DATABASE_URL = "postgresql://postgres:student@localhost:5432/asl_app"
 engine = create_engine(DATABASE_URL)
 
 # Create tables if not exist
