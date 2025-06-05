@@ -11,7 +11,12 @@ from models import (
     IncorrectAnswer,
     FlashcardFeedback,
     DailyPractice,
-    Reminder
+    Reminder,
+    Tag,
+    tag_association_table,
+    daily_practice_tag_association,
+    incorrect_answer_tag_association,
+    learned_flashcard_tag_association
 )
 from auth import get_current_user
 from pydantic import BaseModel
@@ -21,6 +26,8 @@ import random
 
 router = APIRouter(prefix="/learn", tags=["Learn"])
 
+
+# ------------------ FLASHCARDS ------------------
 
 @router.get("/api/flashcards/level/{level}")
 def get_flashcards_by_level(
@@ -39,26 +46,30 @@ def get_flashcards_by_level(
     if only_unlearned:
         query = query.filter(~Flashcard.id.in_(learned_set))
 
+    total_count = query.count()
     flashcards = query.offset(offset).limit(limit).all()
 
-    return [
-        {
-            "id": f.id,
-            "gloss": f.gloss,
-            "video_url": f.video_url,
-            "learned": f.id in learned_set
-        }
-        for f in flashcards
-    ]
+    return {
+        "total": total_count,
+        "flashcards": [
+            {
+                "id": f.id,
+                "gloss": f.gloss,
+                "video_url": f.video_url,
+                "learned": f.id in learned_set,
+                "tags": [tag.name for tag in f.tags],
+                "complexity": f.complexity
+            }
+            for f in flashcards
+        ]
+    }
 
+# ------------------ QUIZ ------------------
 
 @router.get("/api/quiz/level/{level}")
 def get_quiz_for_level(level: int, db: Session = Depends(get_db)):
     all_flashcards = db.query(Flashcard).filter(Flashcard.complexity == level).all()
-    unique_glosses = {}
-    for f in all_flashcards:
-        if f.gloss not in unique_glosses:
-            unique_glosses[f.gloss] = f
+    unique_glosses = {f.gloss: f for f in all_flashcards}
 
     all_flashcards = list(unique_glosses.values())
     if len(all_flashcards) < 4:
@@ -69,7 +80,7 @@ def get_quiz_for_level(level: int, db: Session = Depends(get_db)):
 
     for correct in correct_cards:
         wrong_options = [fc.gloss for fc in all_flashcards if fc.gloss != correct.gloss]
-        choices = random.sample(wrong_options, 3)
+        choices = random.sample(wrong_options, min(3, len(wrong_options)))
         choices.append(correct.gloss)
         random.shuffle(choices)
 
@@ -82,10 +93,16 @@ def get_quiz_for_level(level: int, db: Session = Depends(get_db)):
     return quiz_questions
 
 
+
+class QuizAnswer(BaseModel):
+    flashcard_id: int
+    selected: str
+    question: str
+    correct: bool
+
 class QuizSubmission(BaseModel):
     level: int
     answers: List[dict]
-
 
 @router.post("/api/quiz/submit")
 def submit_quiz(
@@ -148,7 +165,7 @@ def submit_quiz(
         "total": len(submission.answers),
         "result_id": result.id
     }
-
+# ------------------ USER PROGRESS ------------------
 
 @router.get("/api/user/progress")
 def get_user_progress(
@@ -170,9 +187,14 @@ def get_user_progress(
         "updated_at": progress.updated_at,
     }
 
+# ------------------ LEARNED FLASHCARDS ------------------
 
 @router.post("/api/flashcards/{flashcard_id}/learned")
-def mark_flashcard_learned(flashcard_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def mark_flashcard_learned(
+    flashcard_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     existing = db.query(LearnedFlashcard).filter_by(user_id=current_user.id, flashcard_id=flashcard_id).first()
     if existing:
         db.delete(existing)
@@ -183,34 +205,39 @@ def mark_flashcard_learned(flashcard_id: int, db: Session = Depends(get_db), cur
     db.commit()
     return {"status": "learned"}
 
-
-@router.get("/api/quiz/incorrect")
-def get_incorrect_answers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    incorrects = (
-        db.query(IncorrectAnswer)
-        .filter(IncorrectAnswer.user_id == current_user.id)
-        .order_by(IncorrectAnswer.timestamp.desc())
-        .limit(20)
-        .all()
-    )
-
-    return [
-        {
-            "flashcard_gloss": ia.flashcard_gloss,
-            "selected_answer": ia.selected_answer,
-            "correct_answer": ia.correct_answer,
-            "timestamp": ia.timestamp,
-            "video_url": db.query(Flashcard.video_url).filter(Flashcard.gloss == ia.flashcard_gloss).first()[0] if db.query(Flashcard.video_url).filter(Flashcard.gloss == ia.flashcard_gloss).first() else None
-        }
-        for ia in incorrects
-    ]
-
-
 @router.post("/api/flashcards/reset")
 def reset_learned_flashcards(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db.query(LearnedFlashcard).filter(LearnedFlashcard.user_id == current_user.id).delete()
     db.commit()
     return {"message": "All learned flashcards reset."}
+
+@router.get("/api/quiz/incorrect")
+def get_user_incorrect_answers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    incorrect_answers = (
+        db.query(IncorrectAnswer, Flashcard)
+        .join(Flashcard, Flashcard.gloss == IncorrectAnswer.flashcard_gloss)
+        .filter(IncorrectAnswer.user_id == current_user.id)
+        .order_by(IncorrectAnswer.created_at.desc())
+        .all()
+    )
+
+    return [{
+        "flashcard_id": fc.id,
+        "gloss": fc.gloss,
+        "video_url": fc.video_url,
+        "tags": [tag.name for tag in fc.tags],
+        "selected_answer": incorrect.selected_answer,  # Added this
+        "correct_answer": incorrect.correct_answer,    # Added this
+        "timestamp": incorrect.created_at              # Changed from incorrect_at to timestamp
+    } for incorrect, fc in incorrect_answers]
+@router.delete("/api/quiz/incorrect/clear")
+def clear_incorrect_answers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    deleted_count = db.query(IncorrectAnswer).filter(IncorrectAnswer.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": f"Cleared {deleted_count} incorrect answer(s)."}
 
 
 class FeedbackModel(BaseModel):
@@ -218,22 +245,40 @@ class FeedbackModel(BaseModel):
 
 
 @router.post("/api/flashcards/{flashcard_id}/feedback")
-def feedback_flashcard(flashcard_id: int, feedback: FeedbackModel, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def feedback_flashcard(
+    flashcard_id: int,
+    feedback: FeedbackModel,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     entry = db.query(FlashcardFeedback).filter_by(user_id=current_user.id, flashcard_id=flashcard_id).first()
-    if entry:
-        entry.liked = feedback.liked
-    else:
-        entry = FlashcardFeedback(user_id=current_user.id, flashcard_id=flashcard_id, liked=feedback.liked)
-        db.add(entry)
-    db.commit()
-    return {"status": "feedback updated"}
 
+    # If user clicks the same button again (toggle off), remove feedback
+    if entry:
+        if entry.liked == feedback.liked:
+            db.delete(entry)
+            db.commit()
+            return {"status": "feedback removed"}
+        else:
+            entry.liked = feedback.liked
+            db.commit()
+            return {"status": "feedback updated"}
+    else:
+        entry = FlashcardFeedback(
+            user_id=current_user.id,
+            flashcard_id=flashcard_id,
+            liked=feedback.liked
+        )
+        db.add(entry)
+        db.commit()
+        return {"status": "feedback created"}
 
 @router.get("/api/user/analytics")
 def get_user_analytics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Get last 10 quiz scores
     quiz_scores = (
         db.query(QuizResult.created_at, QuizResult.score)
         .filter(QuizResult.user_id == current_user.id)
@@ -242,6 +287,7 @@ def get_user_analytics(
         .all()
     )
 
+    # Learned flashcards by complexity level
     learned_counts = (
         db.query(Flashcard.complexity, func.count(LearnedFlashcard.id))
         .join(Flashcard, Flashcard.id == LearnedFlashcard.flashcard_id)
@@ -250,16 +296,51 @@ def get_user_analytics(
         .all()
     )
 
-    likes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=True).scalar()
-    dislikes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=False).scalar()
+    # Learned flashcards grouped by tag
+    learned_tags = (
+        db.query(Tag.name, func.count(Tag.id))
+        .join(Flashcard.tags)
+        .join(LearnedFlashcard, LearnedFlashcard.flashcard_id == Flashcard.id)
+        .filter(LearnedFlashcard.user_id == current_user.id)
+        .group_by(Tag.name)
+        .all()
+    )
+
+    # Daily practice flashcards grouped by tag
+    practice_tags = (
+        db.query(Tag.name, func.count(Tag.id))
+        .join(Flashcard.tags)
+        .join(DailyPractice, DailyPractice.flashcard_id == Flashcard.id)
+        .filter(DailyPractice.user_id == current_user.id)
+        .group_by(Tag.name)
+        .all()
+    )
+
+    # Incorrect answers grouped by tag
+    incorrect_tags = (
+        db.query(Tag.name, func.count(Tag.id))
+        .join(Flashcard.tags)
+        .join(IncorrectAnswer, IncorrectAnswer.flashcard_gloss == Flashcard.gloss)
+        .filter(IncorrectAnswer.user_id == current_user.id)
+        .group_by(Tag.name)
+        .all()
+    )
+
+    # Count of likes and dislikes
+    likes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=True).scalar() or 0
+    dislikes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=False).scalar() or 0
 
     return {
-        "quiz_scores": [{"date": q[0], "score": q[1]} for q in quiz_scores],
-        "learned_flashcards_by_level": [{"level": row[0], "count": row[1]} for row in learned_counts],
+        "quiz_scores": [{"date": date, "score": score} for date, score in quiz_scores],
+        "learned_flashcards_by_level": [{"level": level, "count": count} for level, count in learned_counts],
+        "learned_tags": [{"tag": tag, "count": count} for tag, count in learned_tags],
+        "daily_practice_tags": [{"tag": tag, "count": count} for tag, count in practice_tags],
+        "incorrect_tags": [{"tag": tag, "count": count} for tag, count in incorrect_tags],
         "likes": likes,
         "dislikes": dislikes
     }
 
+# ------------------ REMINDERS ------------------
 class ReminderCreate(BaseModel):
     message: str
     remind_at: datetime
@@ -305,53 +386,53 @@ def mark_reminder_sent(reminder_id: int, db: Session = Depends(get_db), current_
     return {"message": "Reminder marked as sent"}
 
 
-# -------------- DAILY PRACTICE --------------
+
+# ------------------ DAILY PRACTICE ------------------
 
 @router.get("/api/daily-practice")
 def get_daily_practice(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     today = datetime.utcnow().date()
+    daily_practice_entries = db.query(DailyPractice).filter_by(user_id=current_user.id, practice_date=today).all()
 
-    # Check if daily practice already generated for today
-    existing_practice = db.query(DailyPractice).filter_by(user_id=current_user.id, practice_date=today).all()
-
-    if existing_practice:
-        flashcards = [db.query(Flashcard).filter(Flashcard.id == dp.flashcard_id).first() for dp in existing_practice]
-    else:
-        # If not generated, pick 5 random flashcards from current level or lower
+    if not daily_practice_entries:
         progress = db.query(UserProgress).filter_by(user_id=current_user.id).first()
         current_level = progress.current_level if progress else 1
+        flashcards_query = db.query(Flashcard).filter(Flashcard.complexity <= current_level).all()
 
-        flashcards_query = (
-            db.query(Flashcard)
-            .filter(Flashcard.complexity <= current_level)
-            .all()
-        )
+        if not flashcards_query:
+            return []
 
-        if len(flashcards_query) == 0:
-            return {"message": "No flashcards available for practice today."}
-
-        flashcards = random.sample(flashcards_query, min(5, len(flashcards_query)))
-
-        # Save daily practice records
-        for fc in flashcards:
+        selected_flashcards = random.sample(flashcards_query, min(5, len(flashcards_query)))
+        for fc in selected_flashcards:
             dp = DailyPractice(user_id=current_user.id, flashcard_id=fc.id, practice_date=today, completed=False)
             db.add(dp)
         db.commit()
+        daily_practice_entries = db.query(DailyPractice).filter_by(user_id=current_user.id, practice_date=today).all()
 
-    return [
-        {
-            "id": f.id,
-            "gloss": f.gloss,
-            "video_url": f.video_url
-        }
-        for f in flashcards
-    ]
+    results = []
+    for dp in daily_practice_entries:
+        flashcard = db.query(Flashcard).get(dp.flashcard_id)
+        results.append({
+            "id": flashcard.id,
+            "gloss": flashcard.gloss,
+            "video_url": flashcard.video_url,
+            "tags": [tag.name for tag in flashcard.tags],
+            "completed": dp.completed
+        })
 
-class DailyPracticeComplete(BaseModel):
+    return results
+
+
+class DailyPracticeToggle(BaseModel):
     flashcard_id: int
+    completed: bool  # true or false
 
 @router.post("/api/daily-practice/complete")
-def complete_daily_practice(entry: DailyPracticeComplete, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def toggle_complete_daily_practice(
+    entry: DailyPracticeToggle,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     today = datetime.utcnow().date()
     dp_entry = db.query(DailyPractice).filter_by(
         user_id=current_user.id,
@@ -362,12 +443,12 @@ def complete_daily_practice(entry: DailyPracticeComplete, db: Session = Depends(
     if not dp_entry:
         raise HTTPException(status_code=404, detail="Daily practice entry not found for today")
 
-    dp_entry.completed = True
+    dp_entry.completed = entry.completed
     db.commit()
-    return {"message": "Practice marked as completed"}
+    return {"message": f"Practice marked as {'completed' if entry.completed else 'incomplete'}"}
 
 
-# -------------- DICTIONARY --------------
+# ------------------ DICTIONARY ------------------
 
 @router.get("/api/dictionary/search")
 def search_dictionary(
@@ -390,7 +471,9 @@ def search_dictionary(
             "id": f.id,
             "gloss": f.gloss,
             "video_url": f.video_url,
-            "complexity": f.complexity
+            "complexity": f.complexity,
+            "tags": [tag.name for tag in f.tags]
         }
         for f in flashcards
     ]
+

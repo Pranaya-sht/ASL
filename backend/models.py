@@ -1,9 +1,48 @@
-# models.py
-
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint, Date, Table, func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+
+
+learned_flashcard_tag_association = Table(
+    "learned_flashcard_tags",
+    Base.metadata,
+    Column("learned_flashcard_id", ForeignKey("learned_flashcards.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+incorrect_answer_tag_association = Table(
+    "incorrect_answer_tags",
+    Base.metadata,
+    Column("incorrect_answer_id", ForeignKey("incorrect_answers.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+daily_practice_tag_association = Table(
+    "daily_practice_tags",
+    Base.metadata,
+    Column("daily_practice_id", ForeignKey("daily_practices.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+
+tag_association_table = Table(
+    "flashcard_tags",
+    Base.metadata,
+    Column("flashcard_id", ForeignKey("flashcards.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
+    flashcards = relationship("Flashcard", secondary=tag_association_table, back_populates="tags")
+    learned_flashcards = relationship("LearnedFlashcard", secondary=learned_flashcard_tag_association, back_populates="tags")
+    incorrect_answers = relationship("IncorrectAnswer", secondary=incorrect_answer_tag_association, back_populates="tags")
+    daily_practices = relationship("DailyPractice", secondary=daily_practice_tag_association, back_populates="tags")
 
 class User(Base):
     __tablename__ = "users"
@@ -33,8 +72,6 @@ class User(Base):
     progress = relationship("UserProgress", back_populates="user")
     learned_flashcards = relationship("LearnedFlashcard", back_populates="user")
     incorrect_answers = relationship("IncorrectAnswer", back_populates="user")
-
-    # New relationships
     reminders = relationship("Reminder", back_populates="user", cascade="all, delete-orphan")
     daily_practices = relationship("DailyPractice", back_populates="user", cascade="all, delete-orphan")
 
@@ -44,8 +81,11 @@ class FlashcardPrediction(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     prediction = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)  # Add this field
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
     user = relationship("User", back_populates="predictions")
+    
+
 
 class Flashcard(Base):
     __tablename__ = "flashcards"
@@ -56,15 +96,13 @@ class Flashcard(Base):
     complexity = Column(Integer)
 
     feedback = relationship("FlashcardFeedback", back_populates="flashcard")
-
-    # New relationship
     daily_practices = relationship("DailyPractice", back_populates="flashcard", cascade="all, delete-orphan")
-
+    tags = relationship("Tag", secondary=tag_association_table, back_populates="flashcards")
 class QuizResult(Base):
     __tablename__ = "quiz_results"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))  # adjust if your user table has a different name
+    user_id = Column(Integer, ForeignKey("users.id"))
     level = Column(Integer)
     score = Column(Integer)
     total_questions = Column(Integer)
@@ -89,25 +127,33 @@ class UserProgress(Base):
 
 class LearnedFlashcard(Base):
     __tablename__ = "learned_flashcards"
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     flashcard_id = Column(Integer, ForeignKey("flashcards.id"))
     learned_at = Column(DateTime, default=datetime.utcnow)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+
     __table_args__ = (UniqueConstraint('user_id', 'flashcard_id', name='uq_user_flashcard'),)
+
     user = relationship("User", back_populates="learned_flashcards")
+    tags = relationship("Tag", secondary=learned_flashcard_tag_association, back_populates="learned_flashcards")
 
 class IncorrectAnswer(Base):
     __tablename__ = "incorrect_answers"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    flashcard_gloss = Column(String)
+    flashcard_gloss = Column(String, ForeignKey("flashcards.gloss"))
+    
     selected_answer = Column(String)
     correct_answer = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)  
 
     user = relationship("User", back_populates="incorrect_answers")
+    flashcard = relationship("Flashcard")
+    tags = relationship("Tag", secondary=incorrect_answer_tag_association, back_populates="incorrect_answers")
+    
+    
 
 class FlashcardFeedback(Base):
     __tablename__ = "flashcard_feedback"
@@ -119,8 +165,6 @@ class FlashcardFeedback(Base):
 
     flashcard = relationship("Flashcard", back_populates="feedback")
     user = relationship("User", back_populates="flashcard_feedback")
-
-# New Models
 
 class Reminder(Base):
     __tablename__ = "reminders"
@@ -144,3 +188,4 @@ class DailyPractice(Base):
 
     user = relationship("User", back_populates="daily_practices")
     flashcard = relationship("Flashcard", back_populates="daily_practices")
+    tags = relationship("Tag", secondary=daily_practice_tag_association, back_populates="daily_practices")
