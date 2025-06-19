@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ReactPlayer from "react-player";
-import { FaCheckCircle, FaRedo, FaArrowRight, FaPlay, FaPause, FaClock, FaTrophy, FaExclamationTriangle } from "react-icons/fa";
+import { FaCheckCircle, FaRedo, FaArrowRight, FaClock, FaTrophy, FaExclamationTriangle } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { Howl } from "howler";
 
@@ -14,22 +14,27 @@ export default function QuizPage() {
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [loading, setLoading] = useState(true);
     const [timeSpent, setTimeSpent] = useState(0);
+    const [level, setLevel] = useState(1); // Level from 1 to 10
 
     useEffect(() => {
         fetchQuiz();
         const timer = setInterval(() => setTimeSpent(prev => prev + 1), 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [level]);
 
     const fetchQuiz = () => {
         setLoading(true);
         const token = localStorage.getItem("access_token");
-        fetch("http://localhost:8000/learn/api/quiz/level/1", {
+        fetch(`http://localhost:8000/learn/api/quiz/level/${level}`, {
             headers: { Authorization: `Bearer ${token}` }
         })
             .then(res => res.json())
             .then(data => {
-                setQuestions(data);
+                if (data.error) {
+                    setQuestions([]);
+                } else {
+                    setQuestions(data);
+                }
                 setLoading(false);
             })
             .catch(err => {
@@ -55,6 +60,7 @@ export default function QuizPage() {
     };
 
     const handleSubmit = async () => {
+        // console.log(JSON.stringify(payload))
         const token = localStorage.getItem("access_token");
         const res = await fetch("http://localhost:8000/learn/api/quiz/submit", {
             method: "POST",
@@ -62,7 +68,7 @@ export default function QuizPage() {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify({ level: 1, answers })
+            body: JSON.stringify({ level, answers })
         });
         const data = await res.json();
         setResult(data);
@@ -71,6 +77,12 @@ export default function QuizPage() {
         if (data.passed) {
             const sound = new Howl({ src: ["/sounds/success.mp3"] });
             sound.play();
+        }
+    };
+
+    const handleNextLevel = () => {
+        if (level < 10) {
+            setLevel(level + 1);
         }
     };
 
@@ -92,6 +104,8 @@ export default function QuizPage() {
             </div>
         );
     }
+    console.log("Questions:", questions);
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -99,7 +113,7 @@ export default function QuizPage() {
                 {!submitted ? (
                     <div className="max-w-4xl mx-auto">
                         {/* Header */}
-                        <motion.div 
+                        <motion.div
                             className="bg-white rounded-2xl shadow-xl p-6 mb-8"
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -108,7 +122,7 @@ export default function QuizPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                        Level 1 Quiz
+                                        Level {level} Quiz
                                     </h1>
                                     <p className="text-gray-600 mt-1">Answer all questions to proceed to the next level</p>
                                 </div>
@@ -123,7 +137,7 @@ export default function QuizPage() {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Progress Bar */}
                             <div className="mt-4">
                                 <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -131,7 +145,7 @@ export default function QuizPage() {
                                     <span>{Math.round((getAnsweredCount() / questions.length) * 100)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <motion.div 
+                                    <motion.div
                                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${(getAnsweredCount() / questions.length) * 100}%` }}
@@ -158,15 +172,15 @@ export default function QuizPage() {
                                                 Question {i + 1} of {questions.length}
                                             </h3>
                                         </div>
-                                        
+
                                         <div className="p-6">
                                             {/* Video Player */}
                                             <div className="mb-6">
                                                 <div className="relative rounded-xl overflow-hidden shadow-lg">
-                                                    <ReactPlayer 
-                                                        url={q.video_url} 
-                                                        controls 
-                                                        width="100%" 
+                                                    <ReactPlayer
+                                                        url={q.video_url}
+                                                        controls
+                                                        width="100%"
                                                         height="300px"
                                                         className="rounded-xl"
                                                     />
@@ -176,24 +190,22 @@ export default function QuizPage() {
                                             {/* Options */}
                                             <div className="space-y-3">
                                                 <p className="text-gray-700 font-medium mb-4">Choose your answer:</p>
-                                                {q.options && q.options.map((opt, optIndex) => (
+                                                {q.options && q.options.map((opt) => (
                                                     <motion.button
                                                         key={opt}
                                                         onClick={() => handleAnswer(i, opt)}
-                                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                                                            answers[i]?.selected === opt 
-                                                                ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md" 
-                                                                : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-25"
-                                                        }`}
+                                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-200 ${answers[i]?.selected === opt
+                                                            ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md"
+                                                            : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-25"
+                                                            }`}
                                                         whileHover={{ scale: 1.02 }}
                                                         whileTap={{ scale: 0.98 }}
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                                                answers[i]?.selected === opt 
-                                                                    ? "border-blue-500 bg-blue-500" 
-                                                                    : "border-gray-300"
-                                                            }`}>
+                                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${answers[i]?.selected === opt
+                                                                ? "border-blue-500 bg-blue-500"
+                                                                : "border-gray-300"
+                                                                }`}>
                                                                 {answers[i]?.selected === opt && (
                                                                     <FaCheckCircle className="text-white text-sm" />
                                                                 )}
@@ -203,20 +215,6 @@ export default function QuizPage() {
                                                     </motion.button>
                                                 ))}
                                             </div>
-
-                                            {/* Answer Status */}
-                                            {answers[i] && (
-                                                <motion.div 
-                                                    className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg"
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                >
-                                                    <div className="flex items-center gap-2 text-green-700">
-                                                        <FaCheckCircle />
-                                                        <span className="font-medium">Answer selected!</span>
-                                                    </div>
-                                                </motion.div>
-                                            )}
                                         </div>
                                     </motion.div>
                                 ))}
@@ -224,29 +222,19 @@ export default function QuizPage() {
                         </div>
 
                         {/* Submit Button */}
-                        <motion.div 
+                        <motion.div
                             className="mt-8 text-center"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.5 }}
                         >
-                            {getAnsweredCount() < questions.length && (
-                                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                                    <div className="flex items-center justify-center gap-2 text-amber-700">
-                                        <FaExclamationTriangle />
-                                        <span>Please answer all questions before submitting</span>
-                                    </div>
-                                </div>
-                            )}
-                            
                             <button
                                 onClick={handleSubmit}
                                 disabled={getAnsweredCount() < questions.length}
-                                className={`px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition-all duration-200 ${
-                                    getAnsweredCount() === questions.length
-                                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105"
-                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
+                                className={`px-8 py-4 rounded-xl font-semibold text-lg shadow-lg transition-all duration-200 ${getAnsweredCount() === questions.length
+                                    ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105"
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
                             >
                                 Submit Quiz
                             </button>
@@ -276,7 +264,7 @@ export default function QuizPage() {
                                     </p>
                                 </div>
                             </div>
-                            
+
                             <div className="p-8">
                                 <div className="grid grid-cols-2 gap-6 mb-8">
                                     <div className="text-center p-4 bg-blue-50 rounded-xl">
@@ -304,9 +292,10 @@ export default function QuizPage() {
                                     >
                                         <FaRedo /> Retry Quiz
                                     </motion.button>
-                                    
-                                    {result?.passed && (
+
+                                    {result?.passed && level < 10 && (
                                         <motion.button
+                                            onClick={handleNextLevel}
                                             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
