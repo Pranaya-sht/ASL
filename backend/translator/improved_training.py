@@ -32,7 +32,12 @@ import tensorflow as tf
 
 # Configuration
 DATA_PATH = "MP_Data"
-actions = np.array(["book", "help"])  # Expanded vocabulary
+actions = np.array( [
+    "book", "help", "hello", "thanks", "sorry",
+    "yes", "no", "love", "want", "eat",
+    "drink", "bathroom", "where", "who", "what",
+    "when", "why", "how", "fine", "name"
+])  # Expanded vocabulary
 no_sequences = 50  # Matches dataset
 sequence_length = 30
 
