@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { getUserProgress } from "../../../components/utils/api.js";
-import { FaBookOpen, FaListAlt, FaFire, FaTimesCircle } from 'react-icons/fa';
+import { FaBookOpen, FaListAlt, FaFire, FaTimesCircle, FaClock, FaSearch } from 'react-icons/fa';
 import ConfettiBurst from "../../../components/ConfettiBurst";
 import { Planet } from 'react-kawaii';
 
@@ -62,6 +62,8 @@ export default function Dashboard() {
                             <p>🏆 Last Score: <span className="font-bold">{progress.last_score}%</span></p>
                             <p>🎯 Total Correct Answers: <span className="font-bold">{progress.total_correct}</span></p>
                         </div>
+
+                        {/* Primary Action Buttons */}
                         <div className="grid grid-cols-2 gap-4">
                             <Link href="/study/flashcard">
                                 <motion.button
@@ -97,6 +99,30 @@ export default function Dashboard() {
                                     className="flex items-center justify-center gap-2 bg-red-500 px-4 py-3 rounded-xl shadow-lg hover:bg-red-600"
                                 >
                                     <FaTimesCircle /> Incorrect Answers
+                                </motion.button>
+                            </Link>
+                        </div>
+
+                        {/* Extra Features */}
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+
+
+                            <Link href="/study/Dictionary">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="flex items-center justify-center gap-2 bg-indigo-500 px-4 py-3 rounded-xl shadow-lg hover:bg-indigo-600"
+                                >
+                                    <FaSearch /> Dictionary
+                                </motion.button>
+                            </Link>
+                            <Link href="/study/reminder">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="flex items-center justify-center gap-2 bg-purple-500 px-4 py-3 rounded-xl shadow-lg hover:bg-purple-600"
+                                >
+                                    <FaClock /> Reminder
                                 </motion.button>
                             </Link>
                         </div>

@@ -36,6 +36,7 @@ export default function QuizPage() {
                     setQuestions(data);
                 }
                 setLoading(false);
+                console.log(data);
             })
             .catch(err => {
                 console.error("Failed to fetch quiz:", err);
@@ -46,6 +47,7 @@ export default function QuizPage() {
         setResult(null);
         setCurrentQuestion(0);
         setTimeSpent(0);
+
     };
 
     const handleAnswer = (qIndex, selected) => {
@@ -104,7 +106,7 @@ export default function QuizPage() {
             </div>
         );
     }
-    console.log("Questions:", questions);
+
 
 
     return (

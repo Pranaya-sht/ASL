@@ -33,7 +33,7 @@ os.makedirs("static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Load model and setup MediaPipe
-model = joblib.load("landmark_model.pkl")
+model = joblib.load("label_encoder.pkl")
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1)
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, Integer, Float, cast, case, literal_column
 from database import get_db
 from models import (
     Flashcard,
@@ -16,13 +16,15 @@ from models import (
     tag_association_table,
     daily_practice_tag_association,
     incorrect_answer_tag_association,
-    learned_flashcard_tag_association
+    learned_flashcard_tag_association,
+    
 )
 from auth import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
 import random
+from sqlalchemy import union_all, literal
 
 router = APIRouter(prefix="/learn", tags=["Learn"])
 
@@ -273,15 +275,19 @@ def feedback_flashcard(
         db.commit()
         return {"status": "feedback created"}
 
+# ------------------ USER ANALYTICS ------------------
+
 @router.get("/api/user/analytics")
 def get_user_analytics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Get last 10 quiz scores
+    user_id = current_user.id
+
+    # Last 10 quiz scores
     quiz_scores = (
         db.query(QuizResult.created_at, QuizResult.score)
-        .filter(QuizResult.user_id == current_user.id)
+        .filter(QuizResult.user_id == user_id)
         .order_by(QuizResult.created_at.desc())
         .limit(10)
         .all()
@@ -290,12 +296,13 @@ def get_user_analytics(
     # Learned flashcards by complexity level
     learned_counts = (
         db.query(Flashcard.complexity, func.count(LearnedFlashcard.id))
-        .join(Flashcard, Flashcard.id == LearnedFlashcard.flashcard_id)
-        .filter(LearnedFlashcard.user_id == current_user.id)
+        .join(LearnedFlashcard, LearnedFlashcard.flashcard_id == Flashcard.id)
+        .filter(LearnedFlashcard.user_id == user_id)
         .group_by(Flashcard.complexity)
         .all()
     )
 
+    # Learned flashcards grouped by tag
     # Learned flashcards grouped by tag
     learned_tags = (
         db.query(Tag.name, func.count(Tag.id))
@@ -316,6 +323,7 @@ def get_user_analytics(
         .all()
     )
 
+
     # Incorrect answers grouped by tag
     incorrect_tags = (
         db.query(Tag.name, func.count(Tag.id))
@@ -326,18 +334,227 @@ def get_user_analytics(
         .all()
     )
 
-    # Count of likes and dislikes
-    likes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=True).scalar() or 0
-    dislikes = db.query(func.count()).select_from(FlashcardFeedback).filter_by(user_id=current_user.id, liked=False).scalar() or 0
+    # Likes and dislikes count
+    likes = (
+        db.query(func.count())
+        .select_from(FlashcardFeedback)
+        .filter(FlashcardFeedback.user_id == user_id, FlashcardFeedback.liked.is_(True))
+        .scalar()
+    ) or 0
+
+    dislikes = (
+        db.query(func.count())
+        .select_from(FlashcardFeedback)
+        .filter(FlashcardFeedback.user_id == user_id, FlashcardFeedback.liked.is_(False))
+        .scalar()
+    ) or 0
+# Learned tags grouped by level
+    learned_tags_by_level = (
+        db.query(
+            Flashcard.complexity.label("level"),
+            Tag.name.label("tag"),
+            func.count(LearnedFlashcard.id).label("count")
+        )
+        .join(LearnedFlashcard, LearnedFlashcard.flashcard_id == Flashcard.id)
+        .join(Flashcard.tags)
+        .filter(LearnedFlashcard.user_id == user_id)
+        .group_by(Flashcard.complexity, Tag.name)
+        .all()
+    )
+
+    # Feedback by level (likes/dislikes)
+    feedback_by_level = (
+        db.query(
+            Flashcard.complexity,
+            func.sum(case((FlashcardFeedback.liked == True, 1), else_=0)).label('likes'),
+            func.sum(case((FlashcardFeedback.liked == False, 1), else_=0)).label('dislikes')
+        )
+        .join(FlashcardFeedback, FlashcardFeedback.flashcard_id == Flashcard.id)
+        .filter(FlashcardFeedback.user_id == user_id)
+        .group_by(Flashcard.complexity)
+        .all()
+    )
+
+    # Incorrect answers by level
+    incorrect_by_level = (
+        db.query(Flashcard.complexity, func.count(IncorrectAnswer.id))
+        .join(Flashcard, Flashcard.gloss == IncorrectAnswer.flashcard_gloss)
+        .filter(IncorrectAnswer.user_id == user_id)
+        .group_by(Flashcard.complexity)
+        .all()
+    )
+
+    # Quiz performance by level
+    quiz_performance = (
+        db.query(
+            QuizResult.level,
+            func.avg(QuizResult.score).label('average_score'),
+            func.max(QuizResult.score).label('best_score'),
+            func.count(QuizResult.id).label('attempts')
+        )
+        .filter(QuizResult.user_id == user_id)
+        .group_by(QuizResult.level)
+        .all()
+    )
+
+    # Daily practice stats
+    daily_practice_stats = (
+        db.query(
+            func.count(DailyPractice.id).label('total_practices'),
+            func.sum(case((DailyPractice.completed == True, 1), else_=0)).label('completed_practices'),
+            func.avg(cast(case((DailyPractice.completed == True, 1), else_=0), Float)).label("completion_rate")
+        )
+        .filter(DailyPractice.user_id == user_id)
+        .first()
+    )
+
+    # Reminder stats
+    reminder_stats = (
+        db.query(
+            func.count().label('total_reminders'),
+            func.sum(case((Reminder.sent == True, 1), else_=0)).label('sent_reminders'),
+            func.sum(case((Reminder.sent == False, 1), else_=0)).label('pending_reminders')
+        )
+        .filter(Reminder.user_id == user_id)
+        .first()
+    )
+
+    # Progress timeline (last 30 days)
+    end_date = datetime.utcnow().date()
+    start_date = end_date - timedelta(days=30)
+
+    learned_subq = (
+        db.query(
+            func.date(LearnedFlashcard.learned_at).label("date"),
+            literal("learned").label("type"),
+            func.count(LearnedFlashcard.id).label("count")
+        )
+        .filter(
+            LearnedFlashcard.user_id == user_id,
+            func.date(LearnedFlashcard.learned_at) >= start_date
+        )
+        .group_by(func.date(LearnedFlashcard.learned_at))
+    )
+
+    practice_subq = (
+        db.query(
+            DailyPractice.practice_date.label("date"),
+            literal("daily_practice").label("type"),
+            func.count(DailyPractice.id).label("count")
+        )
+        .filter(
+            DailyPractice.user_id == user_id,
+            DailyPractice.practice_date >= start_date
+        )
+        .group_by(DailyPractice.practice_date)
+    )
+
+    incorrect_subq = (
+        db.query(
+            func.date(IncorrectAnswer.created_at).label("date"),
+            literal("incorrect").label("type"),
+            func.count(IncorrectAnswer.id).label("count")
+        )
+        .filter(
+            IncorrectAnswer.user_id == user_id,
+            func.date(IncorrectAnswer.created_at) >= start_date
+        )
+        .group_by(func.date(IncorrectAnswer.created_at))
+    )
+
+    quiz_subq = (
+        db.query(
+            func.date(QuizResult.created_at).label("date"),
+            literal("quiz").label("type"),
+            func.count(QuizResult.id).label("count")
+        )
+        .filter(
+            QuizResult.user_id == user_id,
+            func.date(QuizResult.created_at) >= start_date
+        )
+        .group_by(func.date(QuizResult.created_at))
+    )
+
+    reminder_subq = (
+        db.query(
+            func.date(Reminder.remind_at).label("date"),
+            literal("reminder").label("type"),
+            func.count(Reminder.id).label("count")
+        )
+        .filter(
+            Reminder.user_id == user_id,
+            func.date(Reminder.remind_at) >= start_date
+        )
+        .group_by(func.date(Reminder.remind_at))
+    )
+
+    union_query = union_all(
+        learned_subq,
+        practice_subq,
+        incorrect_subq,
+        quiz_subq,
+        reminder_subq
+    ).alias("combined")
+
+    progress_timeline = (
+        db.query(
+            union_query.c.date,
+            union_query.c.type,
+            func.sum(union_query.c.count).label("activity_count")
+        )
+        .group_by(union_query.c.date, union_query.c.type)
+        .order_by(union_query.c.date)
+        .all()
+    )
 
     return {
-        "quiz_scores": [{"date": date, "score": score} for date, score in quiz_scores],
+        "quiz_scores": [{"date": date.isoformat(), "score": score} for date, score in quiz_scores],
         "learned_flashcards_by_level": [{"level": level, "count": count} for level, count in learned_counts],
         "learned_tags": [{"tag": tag, "count": count} for tag, count in learned_tags],
         "daily_practice_tags": [{"tag": tag, "count": count} for tag, count in practice_tags],
         "incorrect_tags": [{"tag": tag, "count": count} for tag, count in incorrect_tags],
         "likes": likes,
-        "dislikes": dislikes
+        "dislikes": dislikes,
+        "feedback_by_level": [
+            {"level": level, "likes": like_count or 0, "dislikes": dislike_count or 0}
+            for level, like_count, dislike_count in feedback_by_level
+        ],
+            "learned_tags_by_level": [
+        {"level": level, "tag": tag, "count": count}
+        for level, tag, count in learned_tags_by_level
+    ],
+
+        "incorrect_by_level": [
+            {"level": level, "count": count}
+            for level, count in incorrect_by_level
+        ],
+        "quiz_performance": [
+            {
+                "level": level,
+                "average_score": round(float(avg_score or 0), 2),
+                "best_score": best_score or 0,
+                "attempts": attempts
+            }
+            for level, avg_score, best_score, attempts in quiz_performance
+        ],
+        "daily_practice_stats": {
+            "total_practices": daily_practice_stats.total_practices or 0,
+            "completed_practices": daily_practice_stats.completed_practices or 0,
+            "completion_rate": round((daily_practice_stats.completion_rate or 0) * 100, 2),
+        },
+        "reminder_stats": {
+            "total_reminders": reminder_stats.total_reminders or 0,
+            "sent_reminders": reminder_stats.sent_reminders or 0,
+            "pending_reminders": reminder_stats.pending_reminders or 0,
+        },
+        "progress_timeline": [
+            {
+                "date": date.isoformat(),
+                "type": activity_type,
+                "activity_count": count
+            }
+            for date, activity_type, count in progress_timeline
+        ],
     }
 
 # ------------------ REMINDERS ------------------
