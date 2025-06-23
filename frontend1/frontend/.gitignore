@@ -112,3 +112,6 @@ ipynb_checkpoints/
 
 # VSCode
 .vscode/
+
+alembic/
+keypoints/

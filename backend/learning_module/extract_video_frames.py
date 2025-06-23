@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-VIDEO_DIR = 'raw_videos'
+VIDEO_DIR = 'videos'
 FRAME_DIR = 'video_frames'
 NUM_FRAMES = 16
 INDEX_CSV = 'dataset_index.csv'

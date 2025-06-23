@@ -4,9 +4,14 @@ import mediapipe as mp
 import numpy as np
 import csv
 
+<<<<<<< HEAD
 # Init holistic model
 mp_holistic = mp.solutions.holistic
 holistic = mp_holistic.Holistic(static_image_mode=True)
+=======
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
+>>>>>>> main
 mp_drawing = mp.solutions.drawing_utils
 
 # Paths
@@ -41,7 +46,11 @@ def flatten_hand(hand_landmarks):
 # Write to CSV
 with open(output_csv, 'w', newline='') as f:
     writer = csv.writer(f)
+<<<<<<< HEAD
     header = [f"f{i}" for i in range(TOTAL_FEATURES)] + ["label"]
+=======
+    header = [f"x{i}" for i in range(21)] + [f"y{i}" for i in range(21)] + [f"z{i}" for i in range(21)] + ["label"]
+>>>>>>> main
     writer.writerow(header)
 
     for label in os.listdir(data_dir):
@@ -49,6 +58,7 @@ with open(output_csv, 'w', newline='') as f:
         if not os.path.isdir(label_dir):
             continue
 
+<<<<<<< HEAD
         for img_name in os.listdir(label_dir):
             img_path = os.path.join(label_dir, img_name)
             image = cv2.imread(img_path)
@@ -70,3 +80,17 @@ with open(output_csv, 'w', newline='') as f:
                 continue
 
             writer.writerow(feature_vector.tolist() + [label])
+=======
+            if results.multi_hand_landmarks:
+                landmarks = results.multi_hand_landmarks[0]
+                x = [lm.x for lm in landmarks.landmark]
+                y = [lm.y for lm in landmarks.landmark]
+                z = [lm.z for lm in landmarks.landmark]
+
+                # Normalize coordinates
+                x0, y0 = x[0], y[0]
+                x = [i - x0 for i in x]
+                y = [i - y0 for i in y]
+
+                writer.writerow(x + y + z + [label])
+>>>>>>> main

@@ -1,7 +1,11 @@
 from sqlalchemy import create_engine, text
 from models import Base
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-DATABASE_URL = "postgresql://postgres:student@localhost:5432/asl_app"
+# Get the DATABASE_URL from environment variables
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
 # Create tables if not exist
