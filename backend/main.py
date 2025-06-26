@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from routers import users,learn
+from routers import users,learn,translator
 from fastapi import UploadFile, File
 from pydantic import BaseModel, conlist
 import numpy as np
@@ -23,6 +23,7 @@ app = FastAPI()
 # Register routers
 app.include_router(users.router)
 app.include_router(learn.router)
+app.include_router(translator.router)
 # CORS setup
 app.add_middleware(
     CORSMiddleware,
@@ -83,3 +84,4 @@ async def predict(
         "prediction": prediction,
         "analytics": analytics
     }
+
