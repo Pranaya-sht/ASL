@@ -299,7 +299,7 @@ export default function Progress() {
                     />
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                        <div className="bg-white text-black rounded-xl shadow-lg p-6 border border-gray-100">
                             <h3 className="text-xl font-semibold mb-4 flex items-center text-purple-700">
                                 <FaLightbulb className="mr-2" /> Quick Insights
                             </h3>

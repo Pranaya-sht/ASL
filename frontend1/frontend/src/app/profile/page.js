@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
     const [cropImageSrc, setCropImageSrc] = useState(null);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -132,6 +133,10 @@ const ProfilePage = () => {
         }
     };
 
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
     if (loading) return <div className="text-center mt-10">Loading...</div>;
     if (!userData) return <div className="text-center mt-10">No user data</div>;
 
@@ -144,16 +149,27 @@ const ProfilePage = () => {
 
             <Card className="p-6 rounded-2xl shadow-md">
                 <div className="flex flex-col items-center space-y-4">
-                    <Avatar className="w-32 h-32 rounded-full overflow-hidden">
-                        <AvatarImage
-                            src={previewURL || `http://localhost:8000${user.profile_image_url}`}
-                            alt="User Avatar"
-                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                        />
-                        <AvatarFallback>{user.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative cursor-pointer group" onClick={handleAvatarClick}>
+                        <Avatar className="w-32 h-32 rounded-full overflow-hidden transition-opacity group-hover:opacity-80">
+                            <AvatarImage
+                                src={previewURL || `http://localhost:8000${user.profile_image_url}`}
+                                alt="User Avatar"
+                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                            />
+                            <AvatarFallback>{user.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded-full">
+                            <FaUpload className="text-white text-xl" />
+                        </div>
+                    </div>
 
-                    <Input type="file" accept="image/*" onChange={handleFileChange} />
+                    <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                    />
                     <Button onClick={handleImageUpload} className="gap-2">
                         <FaUpload /> Upload Image
                     </Button>

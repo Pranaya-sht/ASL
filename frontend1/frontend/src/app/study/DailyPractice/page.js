@@ -75,7 +75,7 @@ export default function DailyPractice() {
                 {flashcards.map((card) => (
                     <motion.div
                         key={card.id}
-                        className="bg-white rounded-xl shadow-lg overflow-hidden"
+                        className="bg-white text-black rounded-xl shadow-lg overflow-hidden"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}

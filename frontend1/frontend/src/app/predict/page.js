@@ -210,12 +210,12 @@ export default function Page() {
         onError={() => setError('Failed to load Drawing Utils')}
       />
 
-      <div className="bg-gray-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 dark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-white transition-colors duration-300 min-h-screen flex flex-col items-center justify-center p-4">
         <motion.h1
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-5xl font-bold text-white mb-4 tracking-wide"
+          className="text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-wide"
         >
           Live ASL Recognition
         </motion.h1>
@@ -224,14 +224,14 @@ export default function Page() {
           <video ref={videoRef} className="hidden" playsInline />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
           {!isCameraReady && !error && (
-            <p className="text-xl">Initializing Camera...</p>
+            <p className="text-xl text-white">Initializing Camera...</p>
           )}
           {error && (
             <div className="text-red-500 text-center p-4 bg-red-900 bg-opacity-50 rounded-lg">
               <p className="text-xl font-bold">Error</p>
               <p>{error}</p>
               <button
-                className="mt-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                className="mt-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
                 onClick={() => window.location.reload()}
               >
                 Try Again
@@ -246,17 +246,17 @@ export default function Page() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="mt-6 text-center"
         >
-          <p className="text-xl text-gray-400">Predicted Sign</p>
-          <div className="text-6xl font-semibold text-blue-400 my-2 h-20 flex items-center justify-center">
+          <p className="text-xl text-gray-600 dark:text-gray-400">Predicted Sign</p>
+          <div className="text-6xl font-semibold text-blue-600 dark:text-blue-400 my-2 h-20 flex items-center justify-center">
             {prediction}
           </div>
-          <div className="w-64 bg-gray-700 rounded-full h-2.5">
+          <div className="w-64 bg-gray-300 dark:bg-gray-700 rounded-full h-2.5">
             <div
-              className="bg-blue-500 h-2.5 rounded-full"
+              className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${confidence * 100}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
             Confidence: {(confidence * 100).toFixed(1)}%
           </p>
         </motion.div>

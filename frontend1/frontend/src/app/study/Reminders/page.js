@@ -48,7 +48,7 @@ export default function Reminders() {
     };
 
     return (
-        <div className="p-6">
+        <div className="text-black p-6">
             <h1 className="text-3xl font-bold mb-4 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 ⏰ Reminders
             </h1>

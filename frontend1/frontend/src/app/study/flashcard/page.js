@@ -183,13 +183,14 @@ export default function FlashcardReview() {
             </div>
         );
     }
+    //<div className="min-h-screen bg-gradient-to-br from-blue-500 via-green-500 to-pink-500 dark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-white transition-colors duration-300"></div>
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
-            <div className="container mx-auto px-4 py-8">
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-white transition-colors duration-300">
+            <div className="container mx-auto px-4 py-8 ">
                 <div className="max-w-7xl mx-auto">
                     <motion.div
-                        className="bg-white rounded-2xl shadow-xl p-6 mb-8"
+                        className="bg-white rounded-2xl shadow-xl p-6 mb-8 dark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-white transition-colors duration-300"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}

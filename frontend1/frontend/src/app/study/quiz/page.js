@@ -110,7 +110,7 @@ export default function QuizPage() {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-black transition-colors duration-300">
             <div className="container mx-auto px-4 py-8">
                 {!submitted ? (
                     <div className="max-w-4xl mx-auto">

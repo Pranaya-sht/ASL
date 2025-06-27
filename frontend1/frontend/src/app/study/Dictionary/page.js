@@ -75,9 +75,9 @@ export default function Dictionary() {
                             <button
                                 key={tag}
                                 onClick={() => handleTagFilter(tag)}
-                                className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${selectedTag === tag
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                className={`px-3 py-1 rounded-full text-black text-sm flex items-center gap-1 ${selectedTag === tag
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                                     }`}
                             >
                                 <FaTag size={12} />
@@ -101,7 +101,7 @@ export default function Dictionary() {
                 {filteredResults.map((word) => (
                     <motion.div
                         key={word.id}
-                        className="bg-white rounded-xl shadow-lg p-4 hover:shadow-xl transition-shadow"
+                        className="bg-white text-black rounded-xl shadow-lg p-4 hover:shadow-xl transition-shadow"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         whileHover={{ scale: 1.02 }}

@@ -28,9 +28,10 @@ export default function Dashboard() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 p-6 text-white flex flex-col items-center justify-start">
-            <h1 className="text-4xl font-extrabold mb-4 text-center">
-                Welcome Back to Your <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-pink-300 animate-pulse">ASL Adventure!</span>
+
+        <div className="min-h-screen bg-gradient-to-rdark:from-gray-900 dark:via-gray-800 dark:to-black text-gray-900 dark:text-black transition-colors duration-300 flex flex-col items-center justify-start">
+            <h1 className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-pink-300 animate-pulse mb-4 text-center">
+                Welcome Back to Your <span className="">ASL Adventure!</span>
             </h1>
 
             {loading && (
@@ -65,15 +66,7 @@ export default function Dashboard() {
 
                         {/* Primary Action Buttons */}
                         <div className="grid grid-cols-2 gap-4">
-                            <Link href="/study/flashcard">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="flex items-center justify-center gap-2 bg-green-500 px-4 py-3 rounded-xl shadow-lg hover:bg-green-600"
-                                >
-                                    <FaBookOpen /> Learn
-                                </motion.button>
-                            </Link>
+
                             <Link href="/study/Quiz">
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
@@ -92,6 +85,12 @@ export default function Dashboard() {
                                     <FaFire /> Daily Practice
                                 </motion.button>
                             </Link>
+
+                        </div>
+
+                        {/* Extra Features */}
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+
                             <Link href="/study/IncorrectAnswers">
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
@@ -101,22 +100,8 @@ export default function Dashboard() {
                                     <FaTimesCircle /> Incorrect Answers
                                 </motion.button>
                             </Link>
-                        </div>
 
-                        {/* Extra Features */}
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-
-
-                            <Link href="/study/Dictionary">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="flex items-center justify-center gap-2 bg-indigo-500 px-4 py-3 rounded-xl shadow-lg hover:bg-indigo-600"
-                                >
-                                    <FaSearch /> Dictionary
-                                </motion.button>
-                            </Link>
-                            <Link href="/study/reminder">
+                            <Link href="/study/Reminders">
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
