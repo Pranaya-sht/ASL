@@ -15,17 +15,17 @@ This platform bridges the communication gap by combining a hybrid deep learning 
 
 ## Key Features
 
-### 🎥 1. Real-Time ASL Video Translation
+### 1. Real-Time ASL Video Translation
 *   **Landmark Tracking:** Tracks user movements using MediaPipe Holistic (11 pose points, 21 left-hand points, and 21 right-hand points).
 *   **Deep Learning Engine:** Translates sequence streams of 30 frames into dynamic word classifications using a hybrid `Conv1D` + `BiLSTM` + `Multi-Head Self-Attention` model.
 *   **Performance Optimization:** Runs feature scaling and normalizations based on training set IQR and medians to deliver resilient, low-latency predictions.
 
-### 📝 2. English-to-ASL Text Glossalizer
+###  2. English-to-ASL Text Glossalizer
 *   **ASL Grammar Engine:** Formulates written English phrases into standard ASL syntax order (`TIME` - `TOPIC` - `COMMENT` - `WH`).
 *   **NLP Pipeline:** Utilizes NLTK tokenizers and lemmatizers to resolve contractions, handle spatial index mappings (e.g., *this*, *that*), replace pronouns, and conceptually isolate instrumental phrases.
 *   **Video Playback:** Dynamically maps parsed tokens onto the WLASL dataset video streams, rendering translation videos in a seamless sequence.
 
-### 🎮 3. Gamified Interactive Study Sandbox
+###  3. Gamified Interactive Study Sandbox
 *   **Dynamic Flashcards:** Study vocabulary with interactive dual-sided cards (Word on front, ASL demo video on back). Supports bookmarking, learned flags, and user feedback.
 *   **Adaptive Quizzes:** Test your knowledge in a 10-level progressive quiz system featuring randomly generated video-based distractors.
 *   **Daily Practice & Scheduler:** Generates 5 adaptive daily practice cards based on your current level, tracks your consistency streak, and includes a study scheduler for custom reminders.
